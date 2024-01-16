@@ -104,7 +104,7 @@ Dataen som blir bruk her er allerede ferdig annotert. Det er sjeldent man har ti
 
 Tradisjonelt vil kodingen av et treningsdatasett innebære at (1) et utvalg fra den innsamlede dataen trekkes, (2) kategoriene som skal benyttes blir definert og dokumentert, og (3) en gruppe mennesker går manuelt gjennom utvalget og klassifiserer observasjonene etter de definerte kategoriene. Men i praksis vil en rekke ulike faktorer påvirke hvordan man griper an denne kodingen.
 
-I boka [Text as Data av Grimmer, Roberts og Stewart](https://www.akademika.no/pedagogikk-og-samfunnsvitenskap/sosiologi/text-data/9780691207551) gir forfatterne en grundig innføring i hva som kjennetegner god treningsdata og en god kodebok gjennom kapittel 19. Uten å gå altfor grundig til verks kan et par begreper trekkes frem som særlig relevante:
+I boka [Text as Data av Grimmer, Roberts og Stewart](https://press.princeton.edu/books/paperback/9780691207551/text-as-data) gir forfatterne en grundig innføring i hva som kjennetegner god treningsdata og en god kodebok gjennom kapittel 19. Uten å gå altfor grundig til verks kan et par begreper trekkes frem som særlig relevante:
 
 * **Objektivitet/intersubjektivitet**: Når kodingen blir gjort av flere individer er det viktig at kategoriene som kodes kan måles objektivt, i den forstand at forståelsen av kategoriene ikke er personspesifikke under kodingen. 
   + Innen samfunnsvitenskapen forsker vi likevel ofte på temaer som er vanskelig å definere og måle helt objektivt, men intersubjektivitet må iallefall alltid etterstrebes -> de ulike koderne kan ikke ha forskjellige holdninger om hva som faller inn under de ulike aktegoriene. 
@@ -214,7 +214,7 @@ I eksempelet vårt med klassifikasjonen av hatefulle ytringer bruker vi verken e
 For å holde eksempelet enkelt bruker jeg ikke tid på å teste ulike parametere her, og av den grunn benyttes heller ikke validering. Men i den "virkelige verden" vil man bruke mye tid på å komme frem til den beste modellen gjennom å trene mange ulike modeller med ulike parametere, og man vil da benytte seg av valideringsata (eller kryssvalidering).
 
 # Evaluering
-Vi har allerede trent en klassifikasjonmodell som har en accuracy på 0.94 for treningsdataen. Men hvor godt presterer den på testdataen, og hvordan kan man egentlig evaluere prestasjonen til modellen?
+Vi har allerede trent en klassifikasjonmodell som har en accuracy på 0.94 for treningsdataen. Men hvor godt presterer den på testdataen? Og hvordan kan man egentlig evaluere prestasjonen til modellen? Hva er en _god_ modell?
 
 For å evaluere den endelige modellen må man bruke den til å predikere verdiene til testdataen. 
 ```{r}
@@ -235,6 +235,7 @@ OVerfitting og underfitting er to av de viktigste tingene å se på når en mask
 ```{r echo = FALSE, out.width="70%"}
 knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/fitting.jpg")
 ```
+
 _Figur hentet fra [Ramasubramanian og Moolayil](https://web-p-ebscohost-com.ezproxy.oslomet.no/ehost/ebookviewer/ebook/ZTAwMHh3d19fMjE1MzcyNl9fQU41?sid=a19fbc2e-70c0-4956-ac10-96c6106cae5b@redis&vid=0&lpid=lp_329&format=EB) (2019, s.329)._
 
 * Viktige begreper å kjenne til hvis du skal evaluere en maskinlæringsmodell med hensyn til overfitting og underfitting er bias og varians. 
