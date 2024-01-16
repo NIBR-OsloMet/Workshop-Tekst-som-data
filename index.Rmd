@@ -150,7 +150,7 @@ test <- testing(tweets_split)
 ```
 
 ## Prosessering av tekstdata
-For at algoritmen skal kunne bruke tekstdataen effektivt må dataen bearbeides på en måte som er ganske spesifikk for tekstdata. I dette tilfellet vil jeg unneste tokens, filtere vekk alle symboler som ikke er latinske bokstaver og fjerne lite brukte ord. Det er ved dette steget du også evt ville ha fjernet stoppord.
+For at algoritmen skal kunne bruke tekstdataen effektivt må dataen bearbeides på en måte som er ganske spesifikk for tekstdata. I dette tilfellet vil jeg unneste tokens, fjerne ord som blir brukt sjeldent i dataen, fjerne stoppord, og kalkulere term frequency inverted document frequency for hvert enkelt ord. 
 
 Det er viktig å påpeke at det ikke eksisterer noen standard for hvordan du vil bearbeide tekstene. Denne prosessen vil kunne påvirke resultatene betydelig, og det er viktig at vi som forskere trer varsomt, bevisst og åpent. 
 
