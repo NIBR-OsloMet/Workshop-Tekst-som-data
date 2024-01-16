@@ -160,14 +160,14 @@ Det er viktig å påpeke at det ikke eksisterer noen standard for hvordan du vil
 
 ```{r}
 tweets_recipe <- recipe(label~texts, data=train) |>
-  step_tokenize(texts) |>
-  step_tokenfilter(texts, min_times = 3, max_tokens = 500) |>
-  step_tfidf(texts) |>
-  step_stopwords(custom_stopword_source = stopwords, keep = FALSE) |>
-  step_normalize(all_predictors()) |>
+  step_tokenize(texts) |> # tokeniserer teksten
+  step_tokenfilter(texts, min_times = 3, max_tokens = 500) |> # beholder kun de mest brukte ordene
+  step_tfidf(texts) |> # kalkulerer tf_idf
+  step_stopwords(custom_stopword_source = stopwords, keep = FALSE) |> # fjerner stoppord
+  step_normalize(all_predictors()) |> # normaliserer predikatorene
   prep()
 
-new_train <- bake(tweets_recipe, new_data = train)
+new_train <- bake(tweets_recipe, new_data = train) # oppdaterer dataen 
 new_test <- bake(tweets_recipe, new_data = test)
 ```
 
@@ -208,6 +208,7 @@ Når man snakker om validering innen veiledet maskinlæring, snakker man oftest 
 ```{r echo = FALSE, out.width="80%", fig.cap=""}
 knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/validering.jpg")
 ```
+
 Det er viktig å tenke på at når du bruker egen valideringsdata introduserer du bias på samme måte som du ville gjort hvis du validerte med testdataen, og det kan sies at den biasen blir større og større for hver runde med trening og validering du går gjennom. Et populært alternativ til valideringsdatasettet er å bruke kryssvalidering Kryssvalidering innebærer kort fortalt at modellen itererer over ulike hyperparametere under modelltreningen, og kommer selv frem til de spesifikasjonene som gir best resultat. Å bruke kryssvalidering er et spesielt godt alternativ i tilfeller hvor man har lite annotert data tilgjenlig, og man vil unngå å dedikere deler av dataen til et eget valideringsdatasett. 
 
 I eksempelet vårt med klassifikasjonen av hatefulle ytringer bruker vi verken et valideringsdatasett eller kryssvalidering. Det er dårlig praksis! 
@@ -254,6 +255,7 @@ new_test |>
    conf_mat(truth = label, estimate = ...502) |>
    autoplot(type = 'heatmap')
 ```
+
 Matrisen viser fordelingen av sanne og falske prediksjoner. I forskningslitteraturen bruker man gjerne begrepene "positive" og "negative" kategorier når man jobber med binær klassifikasjon. Den positive kategorien er gjerne kategorien man er interessert i, i vårt tilfelle den hatefulle kategorien, mens den negative er kategorien man ikke er interessert i, i vår tilfelle den ikke-hatefulle kategorien. 
 
 * 319 ikke-hatefulle ytringer ble korrekt klassifisert som ikke-hatefulle (sanne negative)
