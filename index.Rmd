@@ -229,9 +229,10 @@ test_pred |>
 Modellen vår har en accuracy på 0.83 på testdataen. Det er (overraskende) godt for en modell som ikke har gått gjennom en valideringsprosess! Vi ser likevel at modellen er dårligere til å predikere klassene til den usette dataen, enn dataen vi trente den på. Det er helt naturlig! Men dersom forskjellene er veldig store har du en modell som sliter med overfitting. 
 
 ## Overfitting og underfitting
-OVerfitting og underfitting er to av de viktigste tingene å se på når en maskinlæringsmodell skal evalueres, og er mål på hvor godt modellen klarer å generalisere til ny data.
+Overfitting og underfitting er to av de viktigste tingene å se på når en maskinlæringsmodell skal evalueres, og er mål på hvor godt modellen klarer å generalisere til ny data.
 
-**Overfitting** innebærer kort fortalt at modellen gir nøyaktige prediksjoner på treningsdataen, men ikke på testdataen. Denne skjer typisk når modellen er for kompleks, du har trent den så mye at den gjenkjenner all støy og deltajer i treningsdataen som relevante mønstre. Denne kompleksiteten vil gi veldig nøyaktige predisjoner på treningsdataen, men modellen vil ikke kunne generaliseres til ny data. 
+**Overfitting** innebærer kort fortalt at modellen gir nøyaktige prediksjoner på treningsdataen, men ikke på testdataen. Denne skjer typisk når modellen er for kompleks, du har trent den så mye at den gjenkjenner all støy og detaljer i treningsdataen som relevante mønstre. Denne kompleksiteten vil gi veldig nøyaktige predisjoner på treningsdataen, men modellen vil ikke kunne generaliseres til ny data. 
+
 **Underfitting** innebærer at en modell er for enkel til å kunne fange opp relevant kompleksitet i dataen, og modellen vil gi dårlige resultater både på trenignsdata og testdata. 
 
 ```{r echo = FALSE, out.width="70%"}
