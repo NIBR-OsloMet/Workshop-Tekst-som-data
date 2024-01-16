@@ -233,7 +233,7 @@ Overfitting og underfitting er to av de viktigste tingene å se på når en mask
 
 **Overfitting** innebærer kort fortalt at modellen gir nøyaktige prediksjoner på treningsdataen, men ikke på testdataen. Denne skjer typisk når modellen er for kompleks, du har trent den så mye at den gjenkjenner all støy og detaljer i treningsdataen som relevante mønstre. Denne kompleksiteten vil gi veldig nøyaktige predisjoner på treningsdataen, men modellen vil ikke kunne generaliseres til ny data. 
 
-**Underfitting** innebærer at en modell er for enkel til å kunne fange opp relevant kompleksitet i dataen, og modellen vil gi dårlige resultater både på trenignsdata og testdata. 
+**Underfitting** innebærer at en modell er for enkel til å kunne fange opp relevant kompleksitet i dataen, og modellen vil gi dårlige resultater både på treningsdata og testdata. 
 
 ```{r echo = FALSE, out.width="70%"}
 knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/fitting.jpg")
