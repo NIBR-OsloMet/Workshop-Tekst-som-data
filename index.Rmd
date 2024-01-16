@@ -139,6 +139,7 @@ Når vi splitter dataen vil vi typisk ha mer treningsdata enn testdata, rett og 
 ```{r echo = FALSE, out.width="80%", fig.cap=""}
 knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/split.jpg")
 ```
+
 Når du splitter dataen til trening og testing vil du typisk bruke stratifisert sampling, for å forsikre deg om at kategoriene du skal bruke til klassifiseringen er representert i begge datasettene. 
 
 ```{r}
