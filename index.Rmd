@@ -8,13 +8,6 @@ output:
     toc_float:
       collapsed: no
     df_print: paged
-  html_notebook:
-    df_print: paged
-    toc: yes
-    number_sections: yes
-    toc_depth: 2
-    toc_float:
-      collapsed: no
 ---
 
 ```{r setup, include = FALSE}
