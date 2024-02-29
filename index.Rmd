@@ -111,6 +111,8 @@ I boka [Text as Data av Grimmer, Roberts og Stewart](https://press.princeton.edu
 * **Generaliserbarhet**: Når vi koder trenigsdata koder vi stort sett kun et utvalg av et mye større datasett. Det er viktig at kodene vi produserer manuelt kan generaliseres til resten av datasettet, og den større populasjonen forskeren evt. er interessert i. Dette innebærer at treningsdataen må være representativt for resten av dataen, og at alle kategoriene av interesse er tilstrekkelig tilstede i treningsdataen slik at modellen kan lære seg å gjenkjenen mønstrene i dem. 
 * **Validitet**: Måten kategoriene blir definert av forskeren må samsvare med hvordan de blir kodet og brukt i dataen. 
 
+\newpage
+
 ## Ubalansert data 
 Når man jobber med veiledet klassifikasjon vil man helst at kategoriene i treningsdataen skal være balanserte, altså at det er like mange observasjoner i hver kategori. Dersom dataen er ubalansert, hvis en kategori har betydelig færre/flere observasjoner enn den andre, kan dette introdusere bias i modellen. Ettersom datautvalget som kodes til treningen (stort sett alltid) trekkes som et tilfeldig utvalg, vil naturlig skjevhet mellom kategoriene bli overført til treningsdataen. Det er derfor viktig å telle hvor mange observasjoner som er i hver kategori etter at treningsdataen er kodet:
 
