@@ -96,6 +96,7 @@ tweets <- tweets |>
 # Tar en titt på dataen
 glimpse(tweets)
 ```
+\newpage
 
 # Hvordan lage et godt treningsdatasett
 Dataen som blir bruk her er allerede ferdig annotert. Det er sjeldent man har tilgang til ferdigkodet data på denne måten, og ofte er kodingen av et utvalg av dataen blant det første man må gjøre etter at dataen er samlet inn. 

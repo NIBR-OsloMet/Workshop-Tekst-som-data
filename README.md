@@ -1,2 +1,4 @@
 # Workshop-Tekst-som-data
-Scripts for workshopen
+Scripts and data for workshopen
+
+Link til side om veiledet maskinlæring: https://nibr-oslomet.github.io/Workshop-Tekst-som-data/
