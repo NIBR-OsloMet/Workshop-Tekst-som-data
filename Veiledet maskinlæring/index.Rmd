@@ -40,24 +40,25 @@ library(ROSE)
 
 
 # Intro
-Veiledet maskinlæring (_supervised_) skiller seg fra ikke-veiledet læring (_unsupervised_) ved at man har tilgang til et annotert datasett med både input og output, ofte kalt for treningsdata. Treningsdata blir gjerne kodet av forskerne i forberedelsesfasen, før den blir brukt videre til å trene og teste maskinlæringsmodeller. Målet gjennom treningen av veiledete modeller er å kartlegge forholdet mellom input og output så nøyaktig at den kan brukes til å klassifisere ny, usett data, eller til å forutsi utfall og trender. 
+Maskinlæring blir primært delt inn i to retninger: (1) Veileda maskinlæring (_supervised/overvåka_) og (2) ikke-veileda maskinlæring (_unsupervised/uovervåka_). Den største forskjellen mellom disse to retningene ligger i dataen man bruker, hvor veileda læring krever annotert data, noe ikke-veileda ikke gjør. Den annoterte dataen omtales som treningsdata innen veileda læring, da den blir brukt til å trene en modell til å predikere verdier, og består altså av både input og oupt. Ettersom man innen veileda læring bruker annotert data har modellene man trener en slags "baseline" forståelse av hva de korrekte output-verdiene burde være. 
 
-Grunnen til at det kalles _veiledet_ maskinlæring er fordi deler av prosessen krever aktivt tilsyn og veiledning av mennesker, i motsetning til ikke-veiledet læring hvor menneskets rolle er minimal. 
-  
+Grunnen til at det kalles _veileda_ maskinlæring er altså fordi deler av prosessen krever aktivt tilsyn og veiledning av mennesker (gjennom annoteringen av treningsdata), i motsetning til ikke-veileda læring hvor modellen ikke har tilgang til annotert data.
+
 
 ```{r echo = FALSE, out.width="80%", fig.cap=""}
 knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/prosess.jpg")
 
 ```
 
+Et viktig poeng innen veileda læring er at modellen kun trenes til å gjenkjenne kategoriene som eksisterer i treningsdataen. Dersom modellen i figuren over ble gitt testdata som også inneholdt en femkant, ville ikke modellen gjenkjent den som en femkant, men i stedet klassifisert den som en sirkel, firkant eller trekant. Det er derfor viktig at alle kategorier man er interessert i, er representert i treningsdataen. 
 
 
-Veiledet læring brukes til å klassifisere usett data i forhåndsdefinerte kategorier, eller til å forutsi trender og fretidige endringer med en prediktiv modell, og blir gjerne delt inn i to hovedgrupper for problemløsning: klassifikasjon og regresjon. 
+Veileda læring kan altså brukes til å klassifisere data etter forhåndsdefinerte kategorier, men også til å forutsi trender og fremtidige endringer med en prediktiv modell, og blir gjerne delt inn i to hovedgrupper for problemløsning: klassifikasjon og regresjon. 
 
-* **Klassifikasjon**: Innen klassifikasjonsproblemer trenes algoritmer til å fordele data inn i spesifikke kategorier. 
+* **Klassifikasjon**: Innen klassifikasjonsproblemer trenes modeller til å fordele data inn i spesifikke kategorier. 
   + Populære klassifikasjonsalgoritmer er support vector machines (SVM), random forest, og logistisk regresjon (som til tross for navnet  svært ofte brukes til binær klassifikasjon innen maskinlæring). 
   + Eksempler på bruk av veiledet klassifikasjon er filtrering av spam e-poster, identifisering av objekter i bilder, stemme- og ansiktsgjenkjenning, kategorisering av dokumenter, og analyser av sentimenter i tekst. 
-* **Regresjon**: Innen regresjonsproblemer trener man algoritmer til å forstå forholdet mellom avhengige og uavhengige variabler, og for å predikere nummeriske verdier eller forutsi trender. 
+* **Regresjon**: Innen regresjonsproblemer trener man modeller til å forstå forholdet mellom avhengige og uavhengige variabler, og for å predikere nummeriske verdier eller forutsi trender. 
   + Populære regresjonsalgoritmer innen veiledet læring er enkel lineær regrejon, logistisk regresjon og polynomisk regresjon. 
   + Typiske eksempler på bruk av regresjon innen veiledet læring er å forutsi endringer i aksjemarkedet, predikere boligpriser, eller forutsi demografiske endringer. 
 
@@ -65,11 +66,11 @@ De med bakgrunn innen statistikk og erfaring med regresjonsanalyser vil kjenne i
 
 
 # Eksempel: Veiledet klassifikasjon av hatefulle ytringer
-Dette dokumentet skisserer et hands-on eksempel på hvordan fremgangsmåten for å løse et binært klassifikasjonsproblem kan være. Det er likevel viktig å påpeke at prosessen som skisseres her er svært forenklet. Målet er å gi et lite innblikk i hvordan veiledet maskinlæring kan bli benyttet for tekstanalyse, men dokumentet gir ingen dyp teknisk innføring i veiledet læring.
+Dette eksempelet skisserer en enkel fremgangsmåte for å løse et binært klassifikasjonsproblem. Denne prosessen som vises her er ekstremt forenklet, hvor målet er å gi et grunnleggende innblikk i hvordan veileda maskinlæring kan bli benytta for tekstanalyse, uten å være spesielt teknisk avansert. 
 
-Dokumentet er delt inn i tre deler, hvor hver del tar for seg et viktig steg i prosessen for veiledet læring: (1) hvordan lage et godt treningsdatasett; (2) trening, validering og testing av modeller; og (3) modellevaluering. 
+Dokumentet er delt inn i tre deler, hvor hver del tar for seg et viktig steg i prosessen for veileda læring: (1) hvordan lage et godt treningsdatasett; (2) trening, validering og testing av modeller; og (3) modellevaluering. 
 
-Eksempelet jeg benytter meg av her bruker data hentet fra et tidligere NIBR prosjekt [Kartlegging av omfanget av hatefulle ytringer og diskriminerende ytringer mot muslimer](https://oda.oslomet.no/oda-xmlui/handle/11250/2992278). Dataen består av 3277 kommentarer hentet fra sosiale medier, hvor hver kommentar er manuelt kodet som enten hatefull (0) eller ikke-hatefull (1). Denne dataen brukes her for å trene en modell til å klassifisere nye kommentarer som enten hatefulle eller ikke hatefulle. 
+Eksempelet jeg benytter meg av her bruker data hentet fra et tidligere prosjekt [Kartlegging av omfanget av hatefulle ytringer og diskriminerende ytringer mot muslimer](https://oda.oslomet.no/oda-xmlui/handle/11250/2992278). Dataen består av 3277 kommentarer hentet fra sosiale medier, hvor hver kommentar er manuelt kodet som enten hatefull (0) eller ikke-hatefull (1). Denne dataen brukes her for å trene en modell til å klassifisere nye kommentarer som enten hatefulle eller ikke hatefulle. 
 
 Dataen ligger ute på GitHub, og kan enkelt lastes inn i R ved å kjøre koden under:
 ```{r}
@@ -96,7 +97,6 @@ tweets <- tweets |>
 # Tar en titt på dataen
 glimpse(tweets)
 ```
-\newpage
 
 # Hvordan lage et godt treningsdatasett
 Dataen som blir bruk her er allerede ferdig annotert. Det er sjeldent man har tilgang til ferdigkodet data på denne måten, og ofte er kodingen av et utvalg av dataen blant det første man må gjøre etter at dataen er samlet inn. 
@@ -112,7 +112,6 @@ I boka [Text as Data av Grimmer, Roberts og Stewart](https://press.princeton.edu
 * **Generaliserbarhet**: Når vi koder trenigsdata koder vi stort sett kun et utvalg av et mye større datasett. Det er viktig at kodene vi produserer manuelt kan generaliseres til resten av datasettet, og den større populasjonen forskeren evt. er interessert i. Dette innebærer at treningsdataen må være representativt for resten av dataen, og at alle kategoriene av interesse er tilstrekkelig tilstede i treningsdataen slik at modellen kan lære seg å gjenkjenen mønstrene i dem. 
 * **Validitet**: Måten kategoriene blir definert av forskeren må samsvare med hvordan de blir kodet og brukt i dataen. 
 
-\newpage
 
 ## Ubalansert data 
 Når man jobber med veiledet klassifikasjon vil man helst at kategoriene i treningsdataen skal være balanserte, altså at det er like mange observasjoner i hver kategori. Dersom dataen er ubalansert, hvis en kategori har betydelig færre/flere observasjoner enn den andre, kan dette introdusere bias i modellen. Ettersom datautvalget som kodes til treningen (stort sett alltid) trekkes som et tilfeldig utvalg, vil naturlig skjevhet mellom kategoriene bli overført til treningsdataen. Det er derfor viktig å telle hvor mange observasjoner som er i hver kategori etter at treningsdataen er kodet:
