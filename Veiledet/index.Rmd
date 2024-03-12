@@ -1,0 +1,412 @@
+---
+title: "Supervised machine learning"
+output:
+  html_notebook:
+    toc: yes
+    number_sections: yes
+    toc_depth: '2'
+    toc_float:
+      collapsed: no
+    df_print: paged
+---
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(tidytext)
+library(tidymodels)
+library(recipes)
+library(textrecipes)
+library(caret)
+library(readxl)
+library(e1071) 
+library(rio)
+library(ROSE)
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, cache = TRUE)
+```
+
+````
+library(tidyverse)
+library(tidytext)
+library(tidymodels)
+library(recipes)
+library(textrecipes)
+library(caret)
+library(readxl)
+library(rio)
+library(e1071) 
+library(ROSE)
+````
+
+
+# Intro
+Maskinlæring blir primært delt inn i to retninger: (1) Veiledet maskinlæring (_supervised/overvåket_) og (2) ikke-veiledet maskinlæring (_unsupervised/uovervåket_). Den største forskjellen mellom disse to retningene ligger i dataen man bruker, hvor veiledet læring krever annotert data, noe ikke-veiledet ikke gjør. Den annoterte dataen omtales som treningsdata innen veiledet læring, da den blir brukt til å trene en modell til å predikere verdier, og består altså av både input og oupt. Ettersom man innen veiledet læring bruker annotert data har modellene man trener en slags "baseline" forståelse av hva de korrekte output-verdiene burde være, noe modeller  trent med en ikke-veiledet fremgangsmåte ikke vil ha. 
+
+Grunnen til at det kalles _veiledet_ maskinlæring er altså fordi deler av prosessen krever aktivt tilsyn og veiledning av mennesker (gjennom annoteringen av treningsdata), i motsetning til ikke-veiledet læring hvor modellen ikke har tilgang til annotert data.
+
+
+```{r echo = FALSE, out.width="80%", fig.cap=""}
+knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/prosess.jpg")
+
+```
+
+Et viktig poeng innen veiledet læring er at modellen kun trenes til å gjenkjenne kategoriene som eksisterer i treningsdataen. Dersom modellen i figuren over ble gitt testdata som også inneholdt en femkant, ville ikke modellen gjenkjent den som en femkant, men i stedet klassifisert den som en sirkel, firkant eller trekant. Det er derfor viktig at alle kategorier man er interessert i, er representert i treningsdataen. 
+
+
+Veileda læring kan altså brukes til å klassifisere data etter forhåndsdefinerte kategorier, men også til å forutsi trender og fremtidige endringer med en prediktiv modell, og blir gjerne delt inn i to hovedgrupper for problemløsning: klassifikasjon og regresjon. 
+
+* **Klassifikasjon**: Innen klassifikasjonsproblemer trenes modeller til å fordele data inn i spesifikke kategorier. 
+  + Populære klassifikasjonsalgoritmer er support vector machines (SVM), random forest, og logistisk regresjon (som til tross for navnet  svært ofte brukes til binær klassifikasjon innen maskinlæring). 
+  + Eksempler på bruk av veiledet klassifikasjon er filtrering av spam e-poster, identifisering av objekter i bilder, stemme- og ansiktsgjenkjenning, kategorisering av dokumenter, og analyser av sentimenter i tekst. 
+* **Regresjon**: Innen regresjonsproblemer trener man modeller til å forstå forholdet mellom avhengige og uavhengige variabler, og for å predikere nummeriske verdier eller forutsi trender. 
+  + Populære regresjonsalgoritmer innen veiledet læring er enkel lineær regrejon, logistisk regresjon og polynomisk regresjon. 
+  + Typiske eksempler på bruk av regresjon innen veiledet læring er å forutsi endringer i aksjemarkedet, predikere boligpriser, eller forutsi demografiske endringer. 
+
+De med bakgrunn innen statistikk og erfaring med regresjonsanalyser vil kjenne igjen en rekke av algoritmene som benyttes innen maskinlæring. Maskinlæring og statistikk er to nærliggende fagområder, og skillet mellom dem kan ofte være uklart. Litt forenklet kan det sies at statistiske modeller identifiserer variabler av interesse. Statistiske modeller er (generelt) enkle å tolke, og de etablerer både skalaen og signifikansnivået i forholdet mellom uavhengige og avhengige variabler. Men maskinlæringsmodeller på sin side isolerer gjerne ikke effekten til enkeltvariabler på samme måte. Der hvor statistiske modeller brukes for å trekke slutninger om inferens, brukes maskinlæringsmodeller for å gjøre så nøyaktige prediksjoner som mulig. 
+
+
+# Eksempel: Veiledet klassifikasjon av hatefulle ytringer
+Dette eksempelet skisserer en enkel fremgangsmåte for å løse et binært klassifikasjonsproblem. Denne prosessen som vises her er forenklet, hvor målet er å gi et grunnleggende innblikk i hvordan veiledet maskinlæring kan bli benytta for tekstanalyse, uten å være spesielt teknisk avansert. 
+
+Dokumentet er delt inn i tre deler, hvor hver del tar for seg et viktig steg i prosessen for veiledet læring: (1) hvordan lage et godt treningsdatasett; (2) trening, validering og testing av modeller; og (3) modellevaluering. 
+
+Eksempelet jeg benytter meg av her bruker data hentet fra et tidligere prosjekt [Kartlegging av omfanget av hatefulle ytringer og diskriminerende ytringer mot muslimer](https://oda.oslomet.no/oda-xmlui/handle/11250/2992278). Dataen består av 3277 kommentarer hentet fra sosiale medier, hvor hver kommentar er manuelt kodet som enten hatefull (0) eller ikke-hatefull (1). Denne dataen brukes her for å trene en modell til å klassifisere nye kommentarer som enten hatefulle eller ikke hatefulle. 
+
+Dataen ligger ute på GitHub, og kan enkelt lastes inn i R ved å kjøre koden under.
+```{r}
+df_hatefulle <- read.csv("https://github.com/NIBR-OsloMet/hatefulle-ytringer/raw/main/data/processed_corpus.csv")
+
+# Endrer variabelnavnene og legger til en ID variabel 
+df_hatefulle <- df_hatefulle |>
+  rowid_to_column("id") |>
+  select(texts = processed_text,
+         label = target_label,
+         id)
+
+df_hatefulle$label[df_hatefulle$label == 0] <- "hatefull"
+df_hatefulle$label[df_hatefulle$label == 1] <- "ikke-hatefull"
+
+# Konverterer utfallsvariabelen til en faktorvariabel (må være faktor for klassifikasjonen)
+df_hatefulle <- df_hatefulle |>
+  mutate(label = factor(label))
+
+# Ta en titt på dataen, og sjekk at alt ser ok ut
+glimpse(df_hatefulle)
+```
+
+# Hvordan lage et godt treningsdatasett
+Dataen som blir bruk her er allerede ferdig annotert. Det er sjeldent man har tilgang til ferdigkodet data på denne måten, og ofte er kodingen av av dataen blant det første man må gjøre etter at dataen er samlet inn. 
+
+Kodingen av treningsdata gjøres tradisjonelt helt manuelt av mennesker, men den kan også gjøres mer eller mindre automatisk ved å ta i bruk maskinlæring. Å automatisere deler av prosessen er mindre ressurskrevende, og kan eliminere deler av risikoen for menneskelig bias, men anses ofte som å være mindre nøyaktig enn ren manuell koding. 
+
+Når vi jobber med maskinlæring jobber vi oftest med veldig store datasett. Å manuelt kode disse er ekstremt ressursekrevende (mtp. tid og penger), så det er typisk at i stedet for å kode hele datasettet, trekkes et mindre utvalg som blir kodet og brukt til å trene modellen. 
+
+Å sikre god treningsdata er helt kritisk for å kunne trene en modell som er nøyaktig og effektiv. Noen viktige karakteristikker for god treningsdata er:
+
+* **Relevans**: Treningsdataen må være relevant for oppgaven modellen skal løse. Skal du trene en modell til å gjenkjenne hatefulle ytringer, må den bli trent på data som inneholder hatefulle ytringer. Dersom modellen ikke blir trent på tilstrekkelig relevant data vil den ikke gi nøyaktige eller relevante resultater. 
+* **Representativitet**: Nærliggende prinsippet om relevans, er prinsippet om representativitet. Dette går ut på at treningsdataen din må være representativ for resten av dataen modellen skal brukes på, dette er særlig relevant hvis du kun bruker et utvalg av dataen din til modelltrening. Dersom treningsdataen ikke dekker all variasjon dataen, vil ikke modellen bli trent til å gjenkjenne denne variasjonen. 
+* **Kvantitet**: Treningsdatasettet må være stort nok, og dekke alle kategorier av interesse for å kunne gi tifredsstillende resultater. Hva som er regnet som "stort nok" eksisterer det ingen fasit på, og kommer veldig an på dataen du jobber med. Det er viktig å huske at modellene trenes til å gjenkjenne mønstre, så en tommelfingerregel er desto større variasjon i datasettet og kategoriene av interesse, desto mer treningsdata vil du trenge. 
+
+
+## Ubalansert data 
+Når man jobber med veiledet klassifikasjon vil man helst at kategoriene i treningsdataen skal være balanserte, altså at det er like mange observasjoner i hver kategori. Dersom dataen er ubalansert (en kategori har betydelig færre/flere observasjoner enn de andre) kan dette introdusere bias i modellen, hvor den blir flinkere til å gjenkjenne enkelte kategorier på bekostning av de andre. Ettersom datautvalget som kodes til treningen ofte trekkes som et tilfeldig utvalg, vil naturlig skjevhet mellom kategoriene bli overført til treningsdataen. Det er derfor viktig å skaffe seg en oversikt over hvor mange observasjoner som er i hver kategori etter at treningsdataen er kodet:
+
+```{r}
+df_hatefulle |>
+  count(label)
+```
+Utifra tabellen er dataen moderat ubalansert, med 806 observasjoner kodet som hatefulle, og 2471 kodet som ikke-hatefulle. 
+
+Det er verdt å nevne at enkelte algoritmer håndterer ubalansert data bedre enn andre. Hvis man har tid til rådighet kan det ofte være en idé å prøve å trene en håndfull modeller med ulike algoritmer på den virkelige fordelingen først, for det kan være at du får en modell som håndtere ubalansen godt nok. Men modelltrening er en prosess som kan ta lang tid, og ofte vil man justere ubalansert data før modelltrening for å best mulig sikre seg mot å sløse bort tid.
+
+For en grunnleggende innføring i konsekvensene av ubalansert data, og teknikker for å håndtere dette, kan [denne bloggposten](https://www.blog.trainindata.com/machine-learning-with-imbalanced-data/) være et godt utgangspunkt.
+
+For eksempelets skyld velger jeg her å gjøre en enkel justering av ubalansen, ved å oppjustere minoritetsklassen og nedjustere majoritetsklassen, slik at fordelingen blir jevnere. Dette innebærer at tilfeldige observasjoner i minoritetsklassin blir duplisert, og tilfeldige observasjoner i majoritetsklassen blir slettet. Dette er ikke en uproblematisk måte å håndtere ubalanse på, spesielt hvis dataen er veldig ubalansert, ettersom du risikerer overfitting av minoritetsklassen og å miste viktig variasjon i majoritetsklassen. 
+```{r}
+df_hatefulle_os <- ovun.sample(label~., data = df_hatefulle, method = "both", p = 0.5, seed = 1234)$data
+
+df_hatefulle_os |>
+  count(label)
+```
+Fordelingen mellom de to klassene er nå tydlig jevnere, selv om den ikke er helt 50/50. Det er mulig å eksperiementere litt her med ulike verdier for p i koden over. P er her et argument som spesifiserer sannsynligheten for at hver enkelt observasjon vil bli duplisert/slettet, og ```p = 0.5``` vil gi en fordeling nær 50/50. 
+
+## Splitting av dataen
+Når datautvalget er kodet ferdig, og ubalanse er sjekket og håndtert, er det tid for å splitte dataen inn i treningsdata, valideringsdata og testdata. 
+
+Treningsdataen er den delen av datasettet som modellen bruker for å gjenkjenne og lære mønstrene i dataen vår -> treningsdata brukes for å trene maskinlæringsmodeller. Valideringsdataen brukes for å validere modellytelsen under treningsfasen. Og testdata på sin side brukes for å teste den endelige modellen, for å se hvor godt den håndterer ny og tidligere usett data. 
+
+Når vi splitter dataen vil vi typisk ha mest mulig treningsdata. Maskiner lærer gjennom observasjoner og eksempler på samme måte som mennesker, men de trenger betydelig flere eksempler enn hva vi gjør. Typiske forhold er 70/20/10 eller 80/10/10 mellom trening, validering og test, men det er gjerne mengden tilgjengelig data som setter føringen for dette. Det er heller ikke uvanlig å droppe å bruke et eget valideringsdatasett, og heller bruke teknikker som kryssvalidering under modelltreningen. 
+
+```{r echo = FALSE, out.width="80%", fig.cap=""}
+knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/validering.jpg")
+```
+
+Når du splitter dataen til trening og testing vil du typisk bruke stratifisert sampling, for å forsikre deg om at kategoriene du skal bruke til klassifiseringen er representert i alle datasettene. For dette eksempelet splitter jeg datasettet i en 70/20/10 fordeling (ish). 
+
+```{r}
+set.seed(1234)
+split <- initial_split(df_hatefulle_os, prop = 9/10, strata = label) 
+train_val <- training(split)
+test <- testing(split)
+
+train_val_split <- initial_split(train_val, prop = 4/5, strata = label)
+train <- training(train_val_split)
+validate <- testing(train_val_split)
+```
+
+## Prosessering av tekstdata
+For at algoritmen skal kunne bruke tekstdataen effektivt må dataen bearbeides på en måte som er ganske spesifikk for tekstdata. I dette tilfellet vil jeg unneste tokens, fjerne ord som blir brukt sjeldent i dataen, fjerne stoppord, og kalkulere term frequency inverted document frequency for hvert enkelt ord. 
+
+Det er viktig å påpeke at det ikke eksisterer noen standard for hvordan du vil bearbeide tekstene. Denne prosessen vil kunne påvirke resultatene betydelig, og det er viktig at vi som forskere trer varsomt, bevisst og åpent. 
+
+* **Ikke forhast** deg gjennom bearbeidingen av dataen. Bli kjent med korpuset ditt, og kildene tekstene er hentet fra. 
+* **Vær bevisst** på hvordan de ulike stegene forandrer dataen din, og hva det betyr for resultatene. Å fjerne symboler som ikke er alfanummeriske er et veldig vanlig steg å ta, men kan i enkelt sammenhenger være svært problematisk. 
+  + F.eks. kan bruk av !, ? og :) gi tydelige signaler om hvilke følelser teksten gir uttrykk for, så å fjerne tegnsetting er sjeldent en god idé hvis du skal trene modeller for å klassifisere følelser. 
+* **Vær åpen** om hvordan du har bearbeidet dataen. Ettersom stegene du tar påvirker resultatene er det god praksis å være åpen og tydelig om hva du har gjort og hvorfor.
+
+```{r}
+hatefulle_recipe <- recipe(label~texts, data=df_hatefulle_os) |>
+  step_tokenize(texts) |> # tokeniserer teksten
+  step_tokenfilter(texts, max_tokens = 500) |> # beholder kun de mest brukte ordene
+  step_stopwords(texts, language = "no") |> # fjerner stoppord
+  step_tfidf(texts) |> # kalkulerer tf_idf
+  step_normalize(all_predictors()) |> # normaliserer predikatorene
+  prep()
+
+new_train <- bake(hatefulle_recipe, new_data = train) # oppdaterer dataen 
+new_validate <- bake(hatefulle_recipe, new_data = validate)
+new_test <- bake(hatefulle_recipe, new_data = test)
+```
+
+
+# Trening, validering, testing
+Når dataen er ferdig kodet, splittet og bearbeidet, kan modelltreningen endelig begynne. I dette eksempelet blir kun én algortime brukt til treningen, men typisk vil man teste flere ulike algoritmer for å se hvilken som håndterer dataen best. 
+
+Algoritmen som blir brukt her er Support Vector Machines (SVM). SVM er mye brukt innen veiledet maskinlæring, og gir ofte de beste resultatene hvis man har et begrenset antall observasjoner til rådighet for modelltreningen, og man jobber med veldig korte tekster (typisk tekster fra sosiale medier)
+
+Den første modellen som blir bygd her er en helt enkel SVM modell med lineær kernel.
+```{r}
+set.seed(1234)
+svm_rad <- svm(formula = label ~., 
+                data = new_train, 
+                type = "C-classification",
+                kernel = "radial")
+```
+
+Etter at modellen er bygd sjekker vi hvor godt den klarer å predikere klassene til treningsdataen vår:
+```{r}
+train_pred <- new_train |>
+  bind_cols(predict(svm_rad, new_data = new_train))
+
+train_pred |>
+  accuracy(truth = label, estimate = ...501)
+```
+Accuracy er blant de enkleste målene for å sjekke nøykatigheten til en modell, og er rett og slett et mål på hvor stor andel av dataen som ble korrekt klassifisert. Accuracy er ikke det eneste målet man ønsker å bruke for å evaluere en modell (mer om det senere), men det er gjerne det første man sjekker ettersom det er veldig intuitivt å tolke, og er accuracy lav veit du allerede nå at du må tilbake og justere noen parametere. 
+
+Accuracy på 0.954 er svært godt for første forsøk, men dette er på treningsdataen, og det er alltid forventet at en modell vil predikere verdiene til dataen den ble trent på, bedre enn verdiene til ny data. Men det vi egentlig er interessert i er nettopp hvor godt modellen predikerer verdiene til ny data. Det er her valideringsdataen kommer inn i bildet. 
+
+## Validering
+Et viktig prinsipp innen veiledet maskinlæring er bruken av treningsdata og testdata, og prinsippet om at de har to adskilte roller. Treningsdataen brukes til å trene en modell, mens testdataen sin rolle er å gi et endelig mål på hvor godt modellen vil presetere på ny data. Etter at en modell er blir testet med testdataen, skal den i prinsippet ikke bli trent videre. Øyeblikket du fortsetter med å trene modellen etter å ha sett resultatene fra testdataen, introduserer du bias i modellen ved at informasjon fra testdataen blir brukt til å trene modellen. Den største konsekvensen av dette er at testdataen ikke lenger vil gi et mål på hvor godt modellen håndterer usett data, og du risikerer at modellen presterer betydelig dårligere når den skal klassifisere resten av datasettet ditt, enn hva resultatene fra testdataen kansje tilsier. 
+
+Men hvordan skal man da kunne komme frem til en god modell, hvis man ikke en gang kan justere modellen etter å ha testet den? Det er her validering kommer inn i bildet. Valideringsdataen brukes under treningen til å estimere nøyaktigheten til modellene, og gir deg muligheten til å gå frem og tilbake mellom trening og validering for å iterativt komme frem til den beste modellen. Når du er tilfreds med modellens prestasjon bruker du testdataen for å måle hvor godt modellen håndterer helt ny data. 
+
+Et populært alternativ til valideringsdatasettet er å bruke kryssvalidering. Kryssvalidering innebærer kort fortalt at du
+
+1. Splitter datasettet inn i k grupper ( _folds_)
+2. For hver unike gruppe:
+  1. Holder én gruppe utenfor modelltreningen som testdata
+  2. Bruker de resterende gruppene til å trene modellen
+  3. Trener en modell og evaluerer den med testgruppen
+  4. Lagrer evalueringsresultatene og fjerner modellen
+3. Resultatene fra de ulike evalueringsrundene blir oppsummert. 
+
+Resultatene fra kryssvalideringen blir ofte oppsummert som gjennomsnittet av modellene, men det er godt praksis å også rapportere variasjonen mellom dem. 
+```{r echo = FALSE, out.width="80%", fig.cap=""}
+knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/kryssval.jpg")
+```
+For dette eksempelet brukes et eget valideringsdatasett, men å bruke kryssvalidering er et spesielt godt alternativ i tilfeller hvor man har lite annotert data tilgjenlig, og man vil unngå å dedikere deler av dataen til et eget valideringsdatasett. 
+
+
+Vi ser nå på hvor godt modellen klarer å predikerer verdiene til valideringsdataen:
+```{r}
+val_rad <- predict(svm_rad, new_validate)
+val_rad <- bind_cols(new_validate, val_rad)
+
+val_rad |>
+  accuracy(truth = label, estimate = ...501)
+```
+Accuracy går ned til 0.827 når vi bruker modellen på valideringsdataen, noe som er tydelig dårligere enn med treningsdataen. Dette fremhever godt hvorfor det er så viktig å estimere modellytelsen på annen data enn dataen du bruker til treningen, hvis du trener og validerer med samme datasett (uten å bruke f.eks. kryssvalidering) vil du ende opp med en modell som sliter med _overfitting_.
+
+## Overfitting og underfitting
+Overfitting og underfitting er to av de viktigste tingene å se på når en maskinlæringsmodell skal evalueres, og er mål på hvor godt modellen klarer å generalisere til ny data.
+
+**Overfitting** innebærer kort fortalt at modellen gir nøyaktige prediksjoner på treningsdataen, men ikke på testdataen. Denne skjer typisk når modellen er for kompleks, du har trent den så mye at den gjenkjenner all støy og detaljer i treningsdataen som relevante mønstre. Denne kompleksiteten vil gi veldig nøyaktige predisjoner på treningsdataen, men modellen vil ikke kunne generaliseres til ny data. 
+
+**Underfitting** innebærer at en modell er for enkel til å kunne fange opp relevant kompleksitet i dataen, og modellen vil gi dårlige resultater både på treningsdata og testdata. 
+
+```{r echo = FALSE, out.width="70%"}
+knitr::include_graphics("C:/Users/sirifris.ADA/OneDrive - OsloMet/Skrivebord/fitting.jpg")
+```
+
+_Figur hentet fra [Ramasubramanian og Moolayil](https://web-p-ebscohost-com.ezproxy.oslomet.no/ehost/ebookviewer/ebook/ZTAwMHh3d19fMjE1MzcyNl9fQU41?sid=a19fbc2e-70c0-4956-ac10-96c6106cae5b@redis&vid=0&lpid=lp_329&format=EB) (2019, s.329)._
+
+* Viktige begreper å kjenne til hvis du skal evaluere en maskinlæringsmodell med hensyn til overfitting og underfitting er bias og varians. 
+  + **Bias** er prediksjonsfeil som blir introdusertert på grunn av overforenkling av maskinlæringsalgoritmene. Forenkling gjør modellene lettere å tolke og å lære, men gjør at man i mindre grad fanger opp underliggende kompleksitet i dataen. Høy bias vil medføre underfitting.
+  + **Varians** på sin side er prediksjonsfeil introdusert gjennom for høy kompleksitet i modellen, hvor algortimen er for sensitiv til støy og detaljer i treningsdataen. Høy varians vil medføre overfitting. 
+  
+For en grundigere gjennomgang av hvordan overfitting og underfitting kan se ut, og strategier for å håndtere det, kan [denne guiden fra Tensorflow for R anbefales](https://tensorflow.rstudio.com/tutorials/keras/overfit_and_underfit). Guiden inkluderer også relevant R kode.
+
+## Precision, recall og F1
+Når man evaluerer en veiledet klassifikasjonsmodell er man ikke bare interessert i å vite hvor godt modellen håndterer ny data, men også mer spesifikt hvor flink modellen er til å predikere de spesifikke kategoriene. Vi vet at vår modell har en accuracy på 0.827, altså klarer den å klassifisere ca 83 % av valideringsdataen riktig. Men det sier oss ingenting om den er like flink til gjenkjenne begge kategoriene. Med en accuracy på 0.827 kan vi fort ha en modell som klarer å gjenkjenne nesten alle de ikke-hatefulle kommentarene, men som sliter med å gjenkjenne de hatefulle kommentarene. Det ville isåfall vært en dårlig modell for vårt formål når det er de hatefulle kommentarene vi er interesserte i. 
+
+Vi ønsker derfor å se nærmere på hvordan modellen har håndtert prediksjonen av de to ulike kategoriene. For å få et raskt overblikk over dette setter man gjerne opp en confusion matrix:
+```{r}
+new_validate |>
+   bind_cols(predict(svm_rad, new_validate)) |>
+   conf_mat(truth = label, estimate = ...501) |>
+   autoplot(type = 'heatmap')
+```
+Matrisen viser fordelingen av sanne og falske prediksjoner. I forskningslitteraturen bruker man gjerne begrepene "positive" og "negative" kategorier når man jobber med binær klassifikasjon. Den positive kategorien er gjerne kategorien man er interessert i, i vårt tilfelle den hatefulle kategorien, mens den negative er kategorien man ikke er interessert i, i vår tilfelle den ikke-hatefulle kategorien. 
+
+* 234 ikke-hatefulle ytringer ble korrekt klassifisert som ikke-hatefulle (sanne negative)
+* 60 ikke-hatefulle ytringer ble feilaktig klassifisert som hatefulle (falske positive)
+* 42 hatefulle ytringer ble feilaktig klassifisert som ikke-hatefulle (falske negative)
+* 254 hatefulle ytringer ble korrekt klassifisert som hatefulle (sanne positive)
+
+Gjennom matrisen kan vi se at modellen er omtrent like flink til å gjenkjenne hatefulle ytringer som ikke-hatefulle, med minst 80 % korrekt klassifisert i begge kategoriene. 
+
+Ettersom accuracy alene anses som å være et lite nøyaktig mål, er det standard å rapportere F1-score i stedet for klassifikasjonsmodeller. F1 er det harmoniske gjennomsnittet av _precision_ og _recall_.
+
+* **Precision**: Blant alle observasjonene som ble predikert som positive, precision måler andelen som ble korrekt predikert som positive 
+  + ```Precision = Antall sanne positive / (Antall sanne positive + Antall falske positive)```
+* **Recall**: Blant alle observasjonene som faktisk er positive, hvor mange klarte modellen å finne
+  + ```Recall = Antall sanne positive / (Antall sanne positive + Antall falske negative) ```
+* **F1**: Det harmoniske gjennomsnittet av precision og recall
+  + ```F1 = 2 * ((precision * recall) / (precision + recall)) ```
+
+```{r}
+cm <- confusionMatrix(table(val_rad$...501, new_validate$label), positive = "hatefull") 
+# Legg merke til at vi må presisere hvilken kategori som er den positive, for å sørge for at målene blir kalkulert riktig
+
+cm$byClass["Precision"]
+cm$byClass["Recall"]
+cm$byClass["F1"]
+```
+
+Alt i alt har vi en god klassifikasjonsmodell, som klarer å finne ca 86% % av alle de hatefulle kommentarene i valideringsdataen vår, og har et F1-score på 0.833. Til å ikke ha vært gjennom noen form for parametertuning er dette et bra resultat, og godt grunnlag til videre trening.
+
+
+# Modell tuning
+For videre trening av modellen gjelder det å justere parameterne modellen trenes med. For SVM modeller er det spesielt parameterne _gamma_ og _cost_ du vil justere, men for andre algortimer kan det være andre parametere. 
+
+Pakken ```e1071``` har en funksjon kalt ```tune.svm``` som gjør det enkelt å automatisere prosessen med å justere parameterne. Med denne kan du presisere en liste eller sekvens med tall du vil skal bli brukt til modelltrening. **OBS denne koden tar 40 min å kjøre på min PC, hvis du vil kjøre den kan det være verdt å justere verdiene til gamma og cost**. Når modellen har kjørt har du mulighet til å trekke ut de parameterverdiene som ga best resultater. 
+```{r}
+start_time <- Sys.time() # sys.time for å sjekke for lang tid kodesnutten tar å kjøre
+set.seed(1234)
+svm_tune <- tune.svm(x = label ~., 
+                     data = new_train,
+                     gamma = seq(0, 1, by = 0.1), 
+                     cost = seq(1, 3, by = 1), 
+                     kernel = "radial")
+end_time <- Sys.time()
+end_time - start_time
+```
+
+```{r}
+svm_tune$best.parameters$gamma
+svm_tune$best.parameters$cost
+```
+Når vi nå skal trene en ny modell kan vi spesifisere at vi ønsker å bruke disse verdiene for cost og gamma. 
+```{r}
+set.seed(1234)
+svm_model <- svm(formula = label ~ .,
+                 data = new_train,
+                 type = 'C-classification',
+                 kernel = 'radial',
+                 cost = svm_tune$best.parameters$cost, 
+                 gamma = svm_tune$best.parameters$gamma)
+
+validate_tune <- predict(svm_model, new_validate)
+validate_tune <- bind_cols(new_validate, validate_tune)
+
+cm_tuned <- confusionMatrix(table(validate_tune$...501, new_validate$label), positive = "hatefull") 
+cm_tuned$byClass["Precision"]
+cm_tuned$byClass["Recall"]
+cm_tuned$byClass["F1"]
+```
+```{r}
+new_validate |>
+   bind_cols(predict(svm_model, new_validate)) |>
+   conf_mat(truth = label, estimate = ...501) |>
+   autoplot(type = 'heatmap')
+```
+Vi har nå en modell med veldig høy precision, men betydelig dårligere recall. Veldig ofte når man jobber med klassifikasjonsproblemer vil man oppleve at det er en tradeoff mellom precision og recall, hvis du klarer å få ned antallet falske positive vil det stort sett gå på bekostning av antallet falske negative, og vice versa. Hva som er viktigst å vektlegge her vil alltid avhenge av forskningsdesign og hva resultatene av modellen skal brukes til. Hvis målet vårt var å trene en modell som skal brukes til å automatisk filtrere vekk hatefulle kommentarer på sosiale medier, vil vi kanskje vurdere denne modellen som lite optimal, ettersom det er mange hatefulle ytringer som ikke blir fanget opp her. 
+
+Hvis man ønsker kan man prøve å tune videre, med litt andre verdier for cost og gamma):
+```{r}
+start_time <- Sys.time() # sys.time for å sjekke for lang tid kodesnutten tar å kjøre
+set.seed(1234)
+svm_tune_2 <- tune.svm(x = label ~., 
+                     data = new_train,
+                     gamma = 10^(-4:-1), 
+                     cost = seq(0.01, 1, by = 0.1), 
+                     kernel = "radial")
+end_time <- Sys.time()
+end_time - start_time
+```
+```{r}
+svm_tune_2$best.parameters$gamma
+svm_tune_2$best.parameters$cost
+```
+```{r}
+set.seed(1234)
+svm_model_2 <- svm(formula = label ~ .,
+                 data = new_train,
+                 type = 'C-classification',
+                 kernel = 'radial',
+                 cost = 0.91, 
+                 gamma = 0.01)
+
+validate_tune_2 <- predict(svm_model_2, new_validate)
+validate_tune_2 <- bind_cols(new_validate, validate_tune_2)
+
+cm_tuned_2 <- confusionMatrix(table(validate_tune_2$...501, new_validate$label), positive = "hatefull") 
+cm_tuned_2$byClass["Precision"]
+cm_tuned_2$byClass["Recall"]
+cm_tuned_2$byClass["F1"]
+```
+
+```{r}
+new_validate |>
+   bind_cols(predict(svm_model_2, new_validate)) |>
+   conf_mat(truth = label, estimate = ...501) |>
+   autoplot(type = 'heatmap')
+```
+Denne modellen har bedre recall, og antallet falske negative har gått ned til 79, men dette har også gitt oss to flere falske positive. 
+
+## Klassifisere på testdataen
+Når man er ferdig med tuning, og ahr kommet frem til en modell som gir tilstrekkelig gode resultater på valideringsdataen er tiden inne for å bruke modellen på testdataen, og få det endelige målet på hvor godt modellen håndterer klassifikasjonsoppgaven. Siden du har holdt testdataen unne modellen frem til nå, vil resultatene du få her gi en indikasjon på hvor godt modellen vil klare å predikere på helt ny og usett data (såfremt treningsdata og testdata kommer fra samme kilde).
+
+```{r}
+test_pred <- predict(svm_model_2, new_test)
+test_pred <- bind_cols(new_test, test_pred)
+
+cm_test <- confusionMatrix(table(test_pred$...501, new_test$label), positive = "hatefull") 
+cm_test$byClass["Precision"]
+cm_test$byClass["Recall"]
+cm_test$byClass["F1"]
+```
+```{r}
+new_test |>
+   bind_cols(predict(svm_model_2, new_test)) |>
+   conf_mat(truth = label, estimate = ...501) |>
+   autoplot(type = 'heatmap')
+```
+Vår endelige modell har altså F1-score = 0.848, med 41 falske negative og 2 falske positive. 
+
+
+# Ressurser for videre lesing
+
+* [Text Mining with R](https://www.tidytextmining.com/) gir en lett fordøyelig innføring i tekstanalyse, med hands-on eksempler på både veiledete og ikke-veiledete maksinlæringsteknikker, samt mer grunnleggende NLP teknikker. Boka har fokus på tekst mining med tidy-prinsipper, som er en både brukervennlig og allsidig tilnærming til R kode. 
+* [Julia Silge](https://juliasilge.com/blog/) og [Emil Hvitfeldt](https://emilhvitfeldt.com/blog) er to programvareutviklere i POSIT (RStudio) og aktive bloggere. De har publisert en rekke lett tilgjengelige og lite tekniske eksempler på ulike fremgangsmåter for NLP og kvantitativ tekstanalyse i R. 
+* [Text as Data](https://press.princeton.edu/books/hardcover/9780691207544/text-as-data) (dessverre ikke open access) gir en induktiv innføring i bruken av maskinlæring for tekstanalyse innen samfunnsvitenskapelig forskning. Boka fokuserer på forskningsdesign, ikke kode. 
