@@ -1,7 +1,7 @@
 # Workshop-Tekst-som-data
 Koder og data skal være tilgjengelig på mapper. Lenkene ned skal vise html-basert versjon av kodene:
 
-Link til side om [uveiledet maskinlæring](https://nibr-oslomet.github.io/Workshop-Tekst-som-data/Uveiledet_maskinlæring/index.html) 
+Link til side om [uveiledet maskinlæring](https://nibr-oslomet.github.io/Workshop-Tekst-som-data/Uveiledet_maskinlæring/index_tm.html) 
 
 Link til side om [veiledet maskinlæring](https://nibr-oslomet.github.io/Workshop-Tekst-som-data/Veiledet/index.nb.html)
 
